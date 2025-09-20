@@ -1,9 +1,15 @@
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 import Modelo.Libro;
 import Modelo.Usuario;
 import Modelo.Prestamo;
 
 public class SistemaBiblioteca {
+
     private List<Libro> libros;
     private List<Usuario> usuarios;
     private List<Prestamo> prestamos;
@@ -15,76 +21,107 @@ public class SistemaBiblioteca {
         prestamos = new ArrayList<>();
         scanner = new Scanner(System.in);
 
-       
-        libros.add(new Libro(1, "El Quijote", "Miguel de Cervantes", 3));
-        libros.add(new Libro(2, "Cien Años de Soledad", "Gabriel García Márquez", 5));
-        libros.add(new Libro(3, "1984", "George Orwell", 2));
+        
+        cargarLibrosDesdeCSV("libros.csv");
+    }
+
+    private void cargarLibrosDesdeCSV(String nombreArchivo) {
+        try (BufferedReader br = new BufferedReader(new FileReader(nombreArchivo))) {
+            String linea;
+            br.readLine(); 
+
+            while ((linea = br.readLine()) != null) {
+                String[] datos = linea.split(",");
+
+                int id = Integer.parseInt(datos[0]);
+                String titulo = datos[1];
+                String autor = datos[2];
+                int stock = Integer.parseInt(datos[3]);
+
+                libros.add(new Libro(id, titulo, autor, stock));
+            }
+            System.out.println("Libros cargados correctamente desde " + nombreArchivo);
+        } catch (IOException e) {
+            System.out.println("Error al leer el archivo CSV: " + e.getMessage());
+        }
     }
 
     public void mostrarMenu() {
         int opcion;
         do {
-            System.out.println("\n=== BIBLIOTECA ===");
+            System.out.println("\n=== Menú Biblioteca ===");
             System.out.println("1. Listar libros disponibles");
-            System.out.println("2. Realizar préstamo");
-            System.out.println("3. Mostrar préstamos");
+            System.out.println("2. Pedir prestado un libro");
+            System.out.println("3. Mostrar préstamos realizados");
             System.out.println("0. Salir");
-            System.out.print("Opción: ");
-
+            System.out.print("Selecciona una opción: ");
             opcion = scanner.nextInt();
             scanner.nextLine();
 
             switch (opcion) {
-                case 1: listarLibros(); break;
-                case 2: realizarPrestamo(); break;
-                case 3: mostrarPrestamos(); break;
+                case 1:
+                    listarLibros();
+                    break;
+                case 2:
+                    pedirPrestamo();
+                    break;
+                case 3:
+                    mostrarPrestamos();
+                    break;
+                case 0:
+                    System.out.println("Saliendo del sistema...");
+                    break;
+                default:
+                    System.out.println("Opción inválida.");
             }
         } while (opcion != 0);
     }
 
     private void listarLibros() {
-        System.out.println("\n=== LIBROS DISPONIBLES ===");
+        System.out.println("\n=== Libros Disponibles ===");
         for (Libro libro : libros) {
-            if (libro.getStock() > 0) {
-                System.out.println(libro);
-            }
+            System.out.println(libro);
         }
     }
 
-    private void realizarPrestamo() {
-        System.out.print("Nombre usuario: ");
-        String nombre = scanner.nextLine();
-        System.out.print("Cédula: ");
-        String cedula = scanner.nextLine();
-
-        Usuario usuario = new Usuario(nombre, cedula);
+    private void pedirPrestamo() {
+        System.out.println("\nIngrese su nombre: ");
+        String nombreUsuario = scanner.nextLine();
+        Usuario usuario = new Usuario(nombreUsuario);
         usuarios.add(usuario);
 
         listarLibros();
-        System.out.print("ID del libro: ");
+        System.out.print("Ingrese el ID del libro a prestar: ");
         int idLibro = scanner.nextInt();
+        scanner.nextLine();
 
+        Libro libroSeleccionado = null;
         for (Libro libro : libros) {
-            if (libro.getId() == idLibro && libro.getStock() > 0) {
-                Prestamo prestamo = new Prestamo(usuario, libro);
-                prestamos.add(prestamo);
-                usuario.agregarPrestamo(prestamo);
-                libro.setStock(libro.getStock() - 1);
-                System.out.println("Préstamo realizado: " + prestamo);
-                return;
+            if (libro.getId() == idLibro) {
+                libroSeleccionado = libro;
+                break;
             }
         }
-        System.out.println("Libro no disponible");
+
+        if (libroSeleccionado != null && libroSeleccionado.getStock() > 0) {
+            Prestamo prestamo = new Prestamo(usuario, libroSeleccionado);
+            prestamos.add(prestamo);
+            libroSeleccionado.setStock(libroSeleccionado.getStock() - 1);
+            System.out.println("Préstamo realizado con éxito. Fecha devolución: " + prestamo.getFechaDevolucion());
+        } else {
+            System.out.println("El libro no está disponible.");
+        }
     }
 
     private void mostrarPrestamos() {
-        System.out.println("\n=== PRÉSTAMOS ===");
+        System.out.println("\n=== Préstamos Realizados ===");
         for (Prestamo prestamo : prestamos) {
             System.out.println(prestamo);
         }
     }
 
     public static void main(String[] args) {
-        new SistemaBiblioteca().mostrarMenu();
+        SistemaBiblioteca sistema = new SistemaBiblioteca();
+        sistema.mostrarMenu();
     }
 }
